@@ -1,0 +1,11 @@
+config*.json
+*.config.json
+!config.example.json
+config.json.*
+config.local/
+work*/
+.venv/
+.env*
+*.log
+__pycache__/
+.DS_Store

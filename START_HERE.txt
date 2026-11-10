@@ -1,0 +1,31 @@
+Backlog 課題移行ツール（状態の新規追加なし）
+============================================
+Python 3.10+。追加ライブラリ不要。詳しくは README_JA.md をお読みください。
+独自実装・実際のBacklogでの実行は未検証。模擬APIの33テストは成功。
+
+対象: 課題、コメント、現在の添付、親子関係、対応可能なカスタム属性。
+対象外: Wiki、ドキュメント、共有ファイル、Git、設定・ユーザー追加。
+元の投稿者・日時は本文に記録。システム欄はAPI実行者・移行時点。
+元のコメントと添付の所属は再現せず、ファイル別に移行用コメントへ添付。
+元のリンク・画像参照は書き換えません。
+
+1) 設定だけがある、課題0件の移行先を用意する。
+   元・先の他の更新を停止。通知・Webhook等に注意。
+2) cd ~/Downloads/backlog_api_migrator
+3) cp config.example.json config.json
+4) config.json 内の元・先のURLとプロジェクトキーを編集。
+5) source ./api_keys.sh
+6) python3 backlog_migrate.py prepare
+7) work/mapping.json と work/mapping_report.md を確認・修正。
+8) python3 backlog_migrate.py check
+9) python3 backlog_migrate.py migrate --apply --limit 3
+10) python3 backlog_migrate.py verify --deep --limit 3
+11) 移行先の画面で結果を確認。
+12) python3 backlog_migrate.py migrate --apply
+13) python3 backlog_migrate.py verify --deep
+
+必要な親課題がある場合、--limit 3 は3件を超えます。
+中断後はworkを消さず、同じmigrateコマンドで再開します。
+state.jsonやBLMIG識別マーカーを削除しないでください。
+結果未確定時は止まります。--retry-pendingを安易に付けないでください。
+APIキーはチャットやGitに貼り付けないでください。

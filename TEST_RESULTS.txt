@@ -1,0 +1,38 @@
+test_api_result_lost_attachment_recovers (test_migration.EndToEndTests.test_api_result_lost_attachment_recovers) ... ok
+test_api_result_lost_comment_recovers (test_migration.EndToEndTests.test_api_result_lost_comment_recovers) ... ok
+test_api_result_lost_issue_recovers (test_migration.EndToEndTests.test_api_result_lost_issue_recovers) ... ok
+test_apply_required (test_migration.EndToEndTests.test_apply_required) ... ok
+test_complete_migration_and_verify (test_migration.EndToEndTests.test_complete_migration_and_verify) ... ok
+test_get_failure_after_attachment_commit_retains_journal (test_migration.EndToEndTests.test_get_failure_after_attachment_commit_retains_journal) ... ok
+test_limit_includes_parent_then_full_resume_no_duplicates (test_migration.EndToEndTests.test_limit_includes_parent_then_full_resume_no_duplicates) ... ok
+test_local_file_corruption_prevents_write (test_migration.EndToEndTests.test_local_file_corruption_prevents_write) ... ok
+test_mapping_changes_block_after_migration (test_migration.EndToEndTests.test_mapping_changes_block_after_migration) ... ok
+test_prepare_and_check_are_read_only (test_migration.EndToEndTests.test_prepare_and_check_are_read_only) ... ok
+test_recreated_target_rejected (test_migration.EndToEndTests.test_recreated_target_rejected) ... ok
+test_same_size_file_corruption_detected_by_hash (test_migration.EndToEndTests.test_same_size_file_corruption_detected_by_hash) ... ok
+test_source_change_blocks (test_migration.EndToEndTests.test_source_change_blocks) ... ok
+test_unknown_destination_issues_block (test_migration.EndToEndTests.test_unknown_destination_issues_block) ... ok
+test_unresolved_status_blocks_all_writes (test_migration.EndToEndTests.test_unresolved_status_blocks_all_writes) ... ok
+test_429_is_retried_but_not_status_creation (test_migration.UnitTests.test_429_is_retried_but_not_status_creation) ... ok
+test_ambiguous_name_not_auto_selected (test_migration.UnitTests.test_ambiguous_name_not_auto_selected) ... ok
+test_api_error_redacts_api_key (test_migration.UnitTests.test_api_error_redacts_api_key) ... ok
+test_api_key_is_header_not_query_and_form_array_repeats (test_migration.UnitTests.test_api_key_is_header_not_query_and_form_array_repeats) ... ok
+test_client_source_and_status_write_guard (test_migration.UnitTests.test_client_source_and_status_write_guard) ... ok
+test_comments_over_100_inclusive_cursor (test_migration.UnitTests.test_comments_over_100_inclusive_cursor) ... ok
+test_custom_other_input_stops (test_migration.UnitTests.test_custom_other_input_stops) ... ok
+test_cycle_detected (test_migration.UnitTests.test_cycle_detected) ... ok
+test_date_zero_and_list_fields (test_migration.UnitTests.test_date_zero_and_list_fields) ... ok
+test_definitive_400_releases_operation (test_migration.UnitTests.test_definitive_400_releases_operation) ... ok
+test_issues_over_100 (test_migration.UnitTests.test_issues_over_100) ... ok
+test_mentions_are_inert (test_migration.UnitTests.test_mentions_are_inert) ... ok
+test_multipart_has_utf8_filename_and_file_bytes (test_migration.UnitTests.test_multipart_has_utf8_filename_and_file_bytes) ... ok
+test_post_timeout_not_retried (test_migration.UnitTests.test_post_timeout_not_retried) ... ok
+test_unassigned_explicit_mapping (test_migration.UnitTests.test_unassigned_explicit_mapping) ... ok
+test_uncertain_journal_does_not_retry_without_flag (test_migration.UnitTests.test_uncertain_journal_does_not_retry_without_flag) ... ok
+test_url_safety (test_migration.UnitTests.test_url_safety) ... ok
+test_users_not_matched_by_display_name (test_migration.UnitTests.test_users_not_matched_by_display_name) ... ok
+
+----------------------------------------------------------------------
+Ran 33 tests in 0.696s
+
+OK

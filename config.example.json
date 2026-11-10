@@ -1,0 +1,23 @@
+{
+  "source": {
+    "url": "https://old-company.backlog.jp",
+    "project_key": "OLDPJ",
+    "api_key_env": "BACKLOG_SRC_API_KEY"
+  },
+  "destination": {
+    "url": "https://new-company.backlog.jp",
+    "project_key": "NEWPJ",
+    "api_key_env": "BACKLOG_DST_API_KEY"
+  },
+  "work_dir": "work",
+  "options": {
+    "request_interval_seconds": 1.05,
+    "timeout_seconds": 90,
+    "max_file_bytes": 104857600,
+    "copy_comments": true,
+    "copy_attachments": true,
+    "include_change_logs": true,
+    "neutralize_mentions": true,
+    "allow_nonempty_destination": false
+  }
+}
