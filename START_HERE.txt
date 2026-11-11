@@ -14,7 +14,8 @@ Python 3.10+。追加ライブラリ不要。詳しくは README_JA.md をお読
 2) cd ~/Downloads/backlog_api_migrator
 3) cp config.example.json config.json
 4) config.json 内の元・先のURLとプロジェクトキーを編集。
-5) source ./api_keys.sh
+5) config.json のsource.api_keyに元、destination.api_keyに先のAPIキーを記入して保存。
+   source ./api_keys.sh は不要（環境変数方式を使う場合のみ実行）。
 6) python3 backlog_migrate.py prepare
 7) work/mapping.json と work/mapping_report.md を確認・修正。
 8) python3 backlog_migrate.py check

@@ -333,6 +333,54 @@ class EndToEndTests(unittest.TestCase):
 
 
 class UnitTests(unittest.TestCase):
+    def test_clients_accept_config_keys_and_prefer_them(self):
+        config = b.load_config(Path(__file__).resolve().parents[1] / "config.example.json")
+        config["source"]["api_key"] = " source-test-key "
+        config["destination"]["api_key"] = "destination-test-key"
+        with patch.dict(b.os.environ, {"BACKLOG_SRC_API_KEY": "environment-key"}, clear=True):
+            source, destination = b.make_clients(config)
+        self.assertEqual(source.key, "source-test-key")
+        self.assertEqual(destination.key, "destination-test-key")
+        self.assertFalse(source.writable)
+        self.assertTrue(destination.writable)
+
+    def test_clients_fall_back_to_environment_for_empty_or_absent_key(self):
+        config = b.load_config(Path(__file__).resolve().parents[1] / "config.example.json")
+        config["source"].pop("api_key")
+        config["source"]["api_key_env"] = "CUSTOM_SRC_KEY"
+        config["destination"]["api_key"] = "  "
+        with patch.dict(b.os.environ, {"CUSTOM_SRC_KEY": "source-env-key",
+                                       "BACKLOG_DST_API_KEY": "destination-env-key"}, clear=True):
+            source, destination = b.make_clients(config)
+        self.assertEqual(source.key, "source-env-key")
+        self.assertEqual(destination.key, "destination-env-key")
+
+    def test_clients_reject_missing_or_non_string_keys(self):
+        config = b.load_config(Path(__file__).resolve().parents[1] / "config.example.json")
+        with patch.dict(b.os.environ, {}, clear=True):
+            with self.assertRaisesRegex(b.MigrationError, "source.api_key"):
+                b.make_clients(config)
+            config["source"]["api_key"] = 123
+            with self.assertRaisesRegex(b.MigrationError, "文字列"):
+                b.make_clients(config)
+
+    def test_cli_error_redacts_direct_config_keys(self):
+        config = {"source": {"api_key": "source-direct-secret"},
+                  "destination": {"api_key": "destination-direct-secret"}}
+        output = io.StringIO()
+        with patch.object(b, "load_config", return_value=config), \
+                patch.object(b, "make_clients", side_effect=b.MigrationError(
+                    "source-direct-secret / destination-direct-secret")), \
+                contextlib.redirect_stdout(output):
+            previous_umask = b.os.umask(0o077)
+            try:
+                self.assertEqual(b.main(["check"]), 1)
+            finally:
+                b.os.umask(previous_umask)
+        self.assertNotIn("source-direct-secret", output.getvalue())
+        self.assertNotIn("destination-direct-secret", output.getvalue())
+        self.assertIn("[REDACTED] / [REDACTED]", output.getvalue())
+
     def test_cli_error_redacts_custom_api_key_environment(self):
         config = {"source": {"api_key_env": "CUSTOM_SRC_KEY"},
                   "destination": {"api_key_env": "CUSTOM_DST_KEY"}}

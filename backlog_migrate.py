@@ -1032,9 +1032,12 @@ def make_clients(config: dict) -> tuple[BacklogAPI, BacklogAPI]:
     clients = []
     for side, default_env in (("source", "BACKLOG_SRC_API_KEY"), ("destination", "BACKLOG_DST_API_KEY")):
         name = config[side].get("api_key_env", default_env)
-        key = os.environ.get(name, "").strip()
+        direct = config[side].get("api_key", "")
+        if not isinstance(direct, str):
+            raise MigrationError(f"{side}.api_key は文字列にしてください。")
+        key = direct.strip() or os.environ.get(name, "").strip()
         if not key:
-            raise MigrationError(f"環境変数 {name} にAPIキーを設定してください。")
+            raise MigrationError(f"{side}.api_key にAPIキーを設定してください（環境変数 {name} でも指定できます）。")
         clients.append(BacklogAPI(config[side]["url"], key, writable=side == "destination", options=config["options"]))
     return clients[0], clients[1]
 
@@ -1058,10 +1061,14 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in ("prepare", "check") and args.limit:
         p.error("prepare / check は全件を検査します。--limit は migrate / verify 専用です。")
     secret_names = {"BACKLOG_SRC_API_KEY", "BACKLOG_DST_API_KEY"}
+    direct_secrets = set()
     try:
         os.umask(0o077)
         c = load_config(Path(args.config))
         for side, default in (("source", "BACKLOG_SRC_API_KEY"), ("destination", "BACKLOG_DST_API_KEY")):
+            direct = c[side].get("api_key", "")
+            if isinstance(direct, str) and direct.strip():
+                direct_secrets.add(direct.strip())
             name = c[side].get("api_key_env", default)
             if isinstance(name, str):
                 secret_names.add(name)
@@ -1083,7 +1090,7 @@ def main(argv: list[str] | None = None) -> int:
     except (MigrationError, OSError, ValueError, KeyError, TypeError) as e:
         # Never dump a traceback with an API key / request object in local variables.
         message = str(e)
-        for key in sorted({os.environ.get(name, "").strip() for name in secret_names}, key=len, reverse=True):
+        for key in sorted(direct_secrets | {os.environ.get(name, "").strip() for name in secret_names}, key=len, reverse=True):
             if key:
                 message = message.replace(key, "[REDACTED]")
         say("ERROR: " + message)

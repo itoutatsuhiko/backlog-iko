@@ -2,12 +2,12 @@
   "source": {
     "url": "https://old-company.backlog.jp",
     "project_key": "OLDPJ",
-    "api_key_env": "BACKLOG_SRC_API_KEY"
+    "api_key": ""
   },
   "destination": {
     "url": "https://new-company.backlog.jp",
     "project_key": "NEWPJ",
-    "api_key_env": "BACKLOG_DST_API_KEY"
+    "api_key": ""
   },
   "work_dir": "work",
   "options": {

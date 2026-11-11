@@ -15,12 +15,12 @@ Python 3.10以上、Mac / Linux、標準ライブラリのみで動作します�
 cp config.example.json config.json
 ```
 
-各利用者が `config.json` の移行元・先のURLとプロジェクトキーを編集します。
-APIキーは設定ファイルに書かず、実行する同じターミナルで入力します。
+各利用者が `config.json` の移行元・先のURL、プロジェクトキー、`api_key` を編集します。
+`source.api_key` は移行元、`destination.api_key` は移行先のキーです。
+保存後は移行コマンドを実行できます。`source ./api_keys.sh` は不要です。
 
-```bash
-source ./api_keys.sh
-```
+従来の環境変数方式も利用できます。`api_key` が空または省略された場合だけ環境変数から読み取ります。
+詳しくは [README_JA.md](README_JA.md) の設定手順を参照してください。
 
 `config.json`、`config*.json`、`*.config.json`、`config.local/`、
 `work*/`、`.env*`、ログ、PythonのキャッシュはGit管理から除外します。

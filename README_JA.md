@@ -62,19 +62,19 @@ cd ~/Downloads/backlog_api_migrator
 cp config.example.json config.json
 ```
 
-`config.json` をエディタで開き、主に以下の4点を変更します。
+`config.json` をエディタで開き、元・先それぞれのURL・プロジェクトキー・APIキーを入力します。既存のconfig.jsonがある場合は上書きせず、必要な項目を編集してください。
 
 ```json
 {
   "source": {
     "url": "https://old-company.backlog.jp",
     "project_key": "OLDPJ",
-    "api_key_env": "BACKLOG_SRC_API_KEY"
+    "api_key": "移行元のAPIキー"
   },
   "destination": {
     "url": "https://new-company.backlog.jp",
     "project_key": "NEWPJ",
-    "api_key_env": "BACKLOG_DST_API_KEY"
+    "api_key": "移行先のAPIキー"
   },
   "work_dir": "work"
 }
@@ -82,15 +82,14 @@ cp config.example.json config.json
 
 サンプルにある `options` は、最初はそのままにしてください。省略時もサンプルと同じ既定値になります。URLには `/view/...` や `/projects/...` を付けずスペースのルートURLを指定します。`backlog.jp` / `backlog.com` / `backlogtool.com` のHTTPSだけを許可します。
 
-続いて、同じターミナルでAPIキーを入力します。
+`source.api_key` に移行元、`destination.api_key` に移行先のAPIキーを書いて保存します。
+これで設定は完了です。`source ./api_keys.sh` の実行や、ターミナルを開くたびのキー入力は不要です。
+`config.json` はGit管理対象外です。共有する `config.example.json` のAPIキーは空のままにしてください。
 
-```bash
-source ./api_keys.sh
-```
-
-元・先それぞれのキーを順番に入力し、Enterを押します。入力内容は画面に表示されず、シェルのコマンド履歴や設定ファイルにもキーを書きません。キーはそのターミナルの環境変数に設定します。ターミナルを閉じたら再入力が必要です。
-
-環境変数は子プロセスから参照できます。共有端末や第三者のプロセスがある環境での実行は避け、`set -x` 等のシェルトレースを無効にして作業してください。APIキーをチャットへ貼り付けないでください。
+従来の環境変数方式も使用できます。`api_key` を省略または空文字にした場合は、
+`api_key_env` で指定した環境変数（省略時は移行元 `BACKLOG_SRC_API_KEY`、移行先 `BACKLOG_DST_API_KEY`）から読み取ります。
+その場合のみ、同じターミナルで `source ./api_keys.sh` を実行します。
+両方に値がある場合は、configの `api_key` を優先します。
 
 ## 4. スナップショット取得と対応表生成（書き込みなし）
 
@@ -262,7 +261,7 @@ APIキーは `Backlog-API-Key` ヘッダーで送信し、URLに入れません�
 
 | メッセージ・症状 | 確認すること |
 |---|---|
-| APIキーが未設定 | 同じターミナルで `source ./api_keys.sh` を実行 |
+| APIキーが未設定 | config.jsonのsource.api_keyとdestination.api_keyを確認。環境変数方式の場合は同じターミナルで `source ./api_keys.sh` を実行 |
 | 401 / 403 | キー・ユーザー権限・プロジェクト参加・アクセス制限を確認 |
 | `statuses ... 未設定または無効` | 移行先に既存の該当状態があるか。`mapping.json` の先IDを修正 |
 | `users ... 未設定または無効` | ユーザーを移行先プロジェクトに参加させ、先IDを指定。未設定にする場合のみ `-1` |
@@ -288,6 +287,8 @@ python3 -m unittest discover -s tests -v
 ## 14. 作業後
 
 照合レポート・対応表・元データ・処理記録は、社内の情報管理ルールに沿って保管します。不要になったキーは失効させてください。
+
+configに保存したキーが不要になったら、`api_key` の値を消してください。環境変数方式を使用した場合は、次でターミナル内の値を消せます。
 
 ```bash
 unset BACKLOG_SRC_API_KEY BACKLOG_DST_API_KEY
