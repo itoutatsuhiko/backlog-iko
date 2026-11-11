@@ -22,6 +22,11 @@ cp config.example.json config.json
 従来の環境変数方式も利用できます。`api_key` が空または省略された場合だけ環境変数から読み取ります。
 詳しくは [README_JA.md](README_JA.md) の設定手順を参照してください。
 
+ドキュメントの移行は、課題用とは別の `backlog_documents.py` を使用します。
+[ドキュメント移行手順](README_JA.md#16-ドキュメント移行独立cli2026-11-11追加)を参照してください。
+本文・階層・順序・絵文字・タグを登録し、コメント・返信・直接添付はローカルへバックアップします。
+保存先は既定で `work-documents/` に分離します。実際のAPIでの動作は未検証です。
+
 `config.json`、`config*.json`、`*.config.json`、`config.local/`、
 `work*/`、`.env*`、ログ、PythonのキャッシュはGit管理から除外します。
 `config.example.json` は共有するため管理対象です。サンプルには実環境の情報やキーを記載しないでください。

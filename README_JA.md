@@ -25,7 +25,7 @@
 
 ### 対象外・完全には再現できないもの
 
-- **Wiki、ドキュメント、プロジェクト共有ファイル、Git、ユーザー登録、プロジェクト設定、Webhook・外部連携は移行しません。** 課題にリンクされた共有ファイルも対象外です。
+- **課題用CLIでは、Wiki、ドキュメント、プロジェクト共有ファイル、Git、ユーザー登録、プロジェクト設定、Webhook・外部連携は移行しません。** ドキュメント専用CLIは末尾の第16節を参照してください。 課題にリンクされた共有ファイルも対象外です。
 - 添付ファイルと「元のコメント」の所属関係は再現しません。元のコメントはテキストでコピーし、ファイルは別の移行用コメントに添付します。
 - 本文の旧課題リンク・旧添付URL・画像埋め込み・Wikiリンクなどは新URLへ自動書き換えしません。コピーしたファイルは新しい添付から取得できますが、元の本文中の画像やリンクは引き続き旧スペースを参照することがあります。
 - 関連課題（親子以外）、スター、既読、ウォッチ、通知履歴、削除済み課題・削除済み添付・取得不能な過去版は対象外です。
@@ -312,3 +312,164 @@ unset BACKLOG_SRC_API_KEY BACKLOG_DST_API_KEY
 - 属性型: https://developer.nulab.com/ja/docs/backlog/api/2/add-custom-field/
 - メンション: https://developer.nulab.com/ja/docs/backlog/tips/
 - レート制限: https://developer.nulab.com/ja/docs/backlog/rate-limit/
+
+## 16. ドキュメント移行（独立CLI・2026-11-11追加）
+
+課題用の `backlog_migrate.py` とは別に、`backlog_documents.py` を使用します。
+共通の認証・待機・HTTP再試行・処理記録を利用しますが、書き込み許可は分離しています。
+課題・状態・プロジェクト設定・共有ファイル・Wikiを操作しません。
+
+### 対応範囲
+
+| データ | 動作 |
+|---|---|
+| タイトル・本文・絵文字 | 新しいドキュメントとして登録。本文JSONをMarkdownへ変換 |
+| 親子階層・兄弟順 | activeTreeの親優先の順で登録。addLast=trueを指定 |
+| タグ | 名前で登録。移行用に作成した文書のみ対象。登録済みの名前は再送しない |
+| 作成者・更新者・日時 | 元データJSONに保存。システム上はAPI実行者・実行日時 |
+| コメント・返信 | 投稿者・日時・返信を含むAPI応答全体をJSONに保存。移行先へ投稿しない |
+| 直接添付 | ローカルへ取得し、サイズ・SHA-256・文書ID・元添付IDを保存。新添付IDはnull |
+| ゴミ箱 | 件数・ID・位置・ツリー原本をtrash.jsonへ別保存。登録・復元しない |
+| 文書リンク | 作成済みの新IDが分かる `/document/ID` の旧URLを変換 |
+| 課題リンク | 任意指定のissue_mapping.csvで、完了済みかつ元・先URLが一致する `/view/KEY` を変換 |
+| 共有ファイル・旧添付URL・未作成文書・相互リンク | 旧URLを保持し、未解決リンクとして報告。外部URLは保持 |
+
+公開APIの一覧では、ドキュメント本文更新、コメント追加、直接添付の追加APIを確認できませんでした。
+存在を仮定した操作は実装していません。コメントを本文へ追記する、直接添付を共有ファイルへアップロードする等の代替処理も行いません。
+コメント・添付のネイティブ移行が必要なら、ローカルバックアップをもとに手動移行等のプレビューと影響を別途検討します。
+本文末尾には、応答消失時の重複防止用に `[BLDOC:…]` マーカーを1段落追加します。削除しないでください。
+
+**この機能は部分移行です。** 照合成功でも、元の作成者・日時・コメント・添付をネイティブに完全復元したことにはなりません。
+
+### 本文変換と未確認事項
+
+公式の追加API例にある `doc / heading / paragraph / text` を基準にしています。
+一般的な同形式の太字・斜体・取り消し線・インラインコード・箇条書き・番号付きリスト・引用・コードブロック・表・リンクにも対応しています。
+これらの拡張ノードは模擬データでの検証であり、実Backlogの全ノード仕様を確認したものではありません。
+
+未知のノード・書式・意味を持つ属性、画像・埋め込み・メンション、結合セル・列幅等は、変換レポートへ文書IDとJSON内の位置を記録し、checkで停止します。
+空の `{}` や未知のJSONをplainで代用して成功扱いにしません。原文JSONを保管し、変換器への対応追加後に再確認します。
+先頭行が見出しでない表はMarkdown化で意味が変わるため停止します。
+変換先での段落や表の整形に差が出る場合もverifyで不一致になります。画面比較を省略しないでください。
+既定のneutralize_mentionsは課題用と同様、本文の@にもゼロ幅文字を加えることがあります。
+
+実スペースへの接続は今回行っていません。公式例以外の実レスポンスは、読み取り接続の承認後にprepareで保存して確認する必要があります。
+
+### Macでの準備・必要な権限
+
+Python 3.10以上・追加パッケージ不要。既存のconfig.jsonの元・先URL、プロジェクトキー、api_keyを使用します。
+移行元の文書・コメント・添付を読めるプロジェクト参加ユーザーと、移行先でドキュメント作成・タグ追加できる参加ユーザーのキーを指定してください。
+API仕様では文書作成・タグ追加は「制限なし」が必要です。契約・ドキュメント機能利用可否・実際の操作権限は環境で確認してください。
+移行中は元・先の更新を止め、通知・外部連携も事前に調整します。
+
+課題の `work_dir` が `work` なら、既定の保存先は **work-documents/** です。
+既存の課題用work・stateには触れません。別の保存先は各コマンドに同じ `--work-dir work-documents-test` を付けてください。
+別設定を使う場合も `--config config.test.json` を毎回指定します。Git除外に合うworkから始まる名前を推奨します。
+
+### 手順1: 取得・バックアップ（APIは読み取りのみ）
+
+```bash
+python3 backlog_documents.py prepare
+python3 backlog_documents.py preview
+```
+
+prepareはプロジェクトで絞り込んだ100件ずつの一覧、詳細、ツリー、件数、コメント・返信、直接添付を取得します。
+一覧・ツリー・件数の整合を確認します。ゴミ箱の件数APIへの包含仕様は公開資料だけでは確定していないため、activeのみ／active+trashの整合するケースに限定し、それ以外は停止します。
+previewはローカルのスナップショットからMarkdownとレポートを生成します。APIへ接続しません。
+
+```text
+work-documents/
+  snapshot.json                 元データ・プロジェクトID・ツリー・オプション
+  source/文書ID.json            作者・日時・コメント・返信・添付情報を含む原本
+  files/文書ID/添付ID            直接添付の実体
+  trash.json                    ゴミ箱一覧とツリー原本
+  preview/文書ID.md              本文の変換プレビュー（マーカー追加前）
+  conversion_report.json        未対応形式・リンク・未移行データ
+  check_report.json             事前チェック
+  state.json                    ドキュメント専用の処理記録
+  document_mapping.json         旧ID→新ID
+  verification_report.json      登録内容と未移行・未解決の照合結果
+  last_error.json               最後のエラー（キーは伏せ字）
+```
+
+prepare完了後の再prepareは拒否します。中断したprepareにも自動上書きは行いません。
+中断データは保持し、別のworkから始まる保存先を指定して再取得します。
+
+### 手順2: プレビュー確認・事前チェック（APIは読み取りのみ）
+
+previewのMarkdownと原文JSONを比較してください。未対応形式があればコード対応が必要です。
+コメント・添付のバックアップのみとなる範囲、旧URLの残存をconversion_report.jsonで確認します。
+
+```bash
+python3 backlog_documents.py check
+```
+
+元の文書・コメントの変化、プロジェクトID、ローカル添付のSHA-256、未対応変換、移行先の既存文書を確認します。
+タイトル一致だけで統合しません。管理外の既存文書やゴミ箱がある移行先は停止します。既存文書の削除・更新は行いません。
+
+課題リンクの変換を利用する場合は、**prepareからverifyまで毎回**同じCSVを指定します。
+途中でCSVやその内容を変更すると、処理記録との結び付けが変わるため再開を拒否します。
+
+```bash
+python3 backlog_documents.py prepare --issue-mapping work/issue_mapping.csv
+python3 backlog_documents.py check --issue-mapping work/issue_mapping.csv
+```
+
+上記prepareは新しいドキュメント保存先でだけ実行してください。既に準備済みなら繰り返しません。
+
+### 手順3: 承認後に少数件だけ登録（ここから書き込み）
+
+```bash
+python3 backlog_documents.py migrate --apply --limit 3
+python3 backlog_documents.py verify --limit 3
+```
+
+limitはツリーの親優先順の先頭N件を意味します。親や先行する兄弟を飛ばしません。
+作成・タグ付け以外は行いません。チェックは全件対象です。
+移行先の画面で見出し・表・並び順・タグ・絵文字・旧リンクを確認してください。
+
+文書リンクは登録時に新IDが分かるものだけ変換します。自分自身・後続文書へのリンクは旧URLのままです。
+後で全IDが揃っても、本文更新APIを仮定して修正することはありません。
+conversion_reportとpreviewは現時点の対応表で再生成されるため、**実際に投稿したリンクの状態はverification_reportのresults.links**を参照してください。
+
+### 手順4: 別途承認後に全件登録・照合
+
+```bash
+python3 backlog_documents.py migrate --apply
+python3 backlog_documents.py verify
+```
+
+処理済み文書は再登録せず、タグも登録済み名を確認します。
+verifyは元件数、選択範囲の成功・不一致件数、全体の未作成件数、タイトル、絵文字、本文のMarkdown再変換結果、階層・並び順、タグ、未解決リンク、コメント・添付のバックアップ情報をJSONに出力します。
+ローカル添付のハッシュと移行元の変更有無も再確認します。新規文書の添付は作成しないため、移行先添付との照合は対象外です。
+限られた件数のverifyでは全件移行済みとは判定しません。最後はlimitなしで実行します。
+
+### 中断・エラー時
+
+同じconfig、同じwork、同じCSV、同じコードでmigrateを再実行します。
+結果不明のPOSTは無条件再送しません。文書のマーカー／タグ名から登録済みを確認し、判定できなければ停止します。
+処理中の通信がなく、未登録だと人手で確認した場合だけ `--retry-pending` を付けます。
+既存文書と同名というだけでは復旧しません。
+
+| 症状 | 対応 |
+|---|---|
+| 401/403 | APIキー・プロジェクト参加・操作権限・機能利用可否を確認 |
+| 一覧・ツリー・件数不一致 | 元の更新停止、閲覧権限、ゴミ箱の扱いを確認。強行しない |
+| 未対応の本文形式 | conversion_reportの文書ID・JSONパスを確認。原本を変更せず変換対応を追加 |
+| 管理外の文書あり | 空のテスト先を使う。既存文書の自動削除・統合はしない |
+| 結果未確定 | stateを保持して登録結果を確認。retry-pendingを安易に使わない |
+| 本文照合不一致 | 元JSON・preview・先JSONと画面を比較。サーバーのMarkdown変換差も確認 |
+| 添付ハッシュ不一致 | バックアップを保持し、ファイルの変更・欠損を調査 |
+
+### 仕様と検証根拠
+
+2026-11-11に公開仕様を参照。テストデータは公式の構造を参考にした**合成データ**であり、実API応答を採取したものではありません。
+
+- [一覧](https://developer.nulab.com/ja/docs/backlog/api/2/get-document-list/)
+- [詳細](https://developer.nulab.com/ja/docs/backlog/api/2/get-document/)
+- [ツリー](https://developer.nulab.com/ja/docs/backlog/api/2/get-document-tree/)
+- [件数](https://developer.nulab.com/ja/docs/backlog/api/2/count-document/)
+- [追加](https://developer.nulab.com/ja/docs/backlog/api/2/add-document/)
+- [タグ追加](https://developer.nulab.com/ja/docs/backlog/api/2/add-document-tag/)
+- [コメント・返信取得](https://developer.nulab.com/ja/docs/backlog/api/2/get-document-comment/)
+- [添付ダウンロード](https://developer.nulab.com/ja/docs/backlog/api/2/get-document-attachments/)
